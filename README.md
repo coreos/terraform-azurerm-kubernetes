@@ -1,8 +1,10 @@
 # Install Tectonic on Azure with Terraform
 
-This guide deploys a Tectonic cluster on an Azure account.
+This module deploys a [Tectonic][tectonic] [Kubernetes][k8s] cluster on Azure using [Terraform][terraform]. Tectonic is an enterprise-ready distribution of Kubernetes including automatic updates, monitoring and alerting, integration with common authentication regimes, and a graphical console for managing clusters in a web browser.
 
-The Azure platform templates generally adhere to the standards defined by the project [conventions][conventions] and [generic platform requirements][generic]. This document aims to clarify the implementation details specific to the Azure platform.
+This module can deploy either a complete Tectonic cluster, requiring a Tectonic license, or a "stock" Kubernetes cluster without Tectonic features.
+
+The Azure platform templates generally adhere to the standards defined by the project [conventions][conventions] and [generic platform requirements][generic]. This document clarifies the implementation details specific to the Azure platform.
 
 ## Prerequisites
 
@@ -34,31 +36,36 @@ The [Azure CLI][azure-cli] is required to generate Azure credentials.
 
 ### ssh-agent
 
-Ensure `ssh-agent` is running:
-```sh
-$ eval $(ssh-agent)
-```
+The next step in preparing the environment for installation is to add the key to be used for logging in to each cluster node during initialization to the local `ssh-agent`.
 
-Add the SSH key that will be used for the Tectonic installation to `ssh-agent`:
-```sh
-$ ssh-add <path-to-ssh-private-key>
-```
+#### Adding a key to ssh-agent
 
-Verify that the SSH key identity is available to the ssh-agent:
-```sh
+Ensure `ssh-agent` is running by listing the known keys:
+
+```bash
 $ ssh-add -L
 ```
 
-Reference the absolute path of the **_public_** component of the SSH key in `tectonic_azure_ssh_key`.
+Add the SSH private key that will be used for the deployment to `ssh-agent`:
+
+```bash
+$ ssh-add ~/.ssh/id_rsa
+```
+
+Verify that the SSH key identity is available to the ssh-agent:
+
+```bash
+$ ssh-add -L
+```
+
+Reference the absolute path of the *public* component of the SSH key in the `tectonic_azure_ssh_key` variable.
 
 Without this, terraform is not able to SSH copy the assets and start bootkube.
-Also ensure the SSH known_hosts file doesn't have old records for the API DNS name, because key fingerprints will not match.
+Also, ensure the SSH known_hosts file doesn't have old records for the API DNS name, because key fingerprints will not match.
 
-## Getting Started
+## Configuring the deployment
 
-### Initialize and configure Terraform
-
-#### Get Terraform's Azure modules and providers
+### Get Terraform's Azure modules and providers
 
 Get the modules and providers for the Azure platform that Terraform will use to create cluster resources:
 
@@ -68,25 +75,14 @@ Downloading modules...
 Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
 Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
 Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
-Get: git::https://github.com/coreos/tectonic-installer.git?ref=1d75718d96c7bdec04d5ffb8a72fa059b1fcb79a
+...
+
 
 Initializing provider plugins...
 - Downloading plugin for provider "template"...
 - Downloading plugin for provider "azurerm"...
 - Downloading plugin for provider "null"...
 - Downloading plugin for provider "ignition"...
-- Downloading plugin for provider "random"...
-- Downloading plugin for provider "archive"...
-- Downloading plugin for provider "local"...
-- Downloading plugin for provider "tls"...
 ...
 ```
 
@@ -94,7 +90,9 @@ Initializing provider plugins...
 
 Execute `az login` to obtain an authentication token. See the [Azure CLI docs][login] for more information. Once logged in, note the `id` field of the output from the `az login` command. This is a simple way to retrieve the Subscription ID for the Azure account.
 
-Next, add a new role assignment for the Installer to use:
+#### Add Active Directory Service Principal role assignment
+
+Next, add a new Active Directory (AD) Service Principal (SP) role assignment to grant Terraform access to Azure:
 
 ```sh
 $ az ad sp create-for-rbac -n "http://tectonic" --role contributor
@@ -124,32 +122,30 @@ $ export ARM_TENANT_ID=generated-tenant
 
 With the environment set, it's time to specify the deployment details for the cluster.
 
-## Customize the deployment
+### Customize the deployment
 
-Possible customizations to the base installation are listed in `examples/terraform.tfvars`. 
-Copy the example configuration:
+Customizations to the base installation are made to the Terraform variables for each deployment. Examples of the this module's variables are provided in the file `examples/kubernetes.tf`.
 
-```sh
-$ cp examples/terraform.tfvars terraform.tfvars
-```
+Edit the variables with the Azure account details, domain name, and [Tectonic license][register]. To install a basic Kubernetes cluster without Tectonic features, set the `tectonic_vanilla_k8s` key to `true` and omit the Tectonic license.
 
-Edit the parameters in `terraform.tfvars` with the deployment's Azure details, domain name, license, and pull secret. [View all of the Azure specific options and the common Tectonic variables][vars].
+[View all of the Azure specific options and the common Tectonic variables][vars].
 
-### Key values for basic Azure deployment
+#### Key values for basic Azure deployment
 
-These are the basic values that must be adjusted for each Tectonic deployment on Azure. See the details of each value in the `terraform.tfvars` file.
+These are the basic values that must be adjusted for each deployment on Azure. See the details of each value in the comments in the `examples/kubernetes.tf` file.
 
 * `tectonic_admin_email` - For the initial Console login
-* `tectonic_admin_password_hash` - Bcrypted value
+* `tectonic_admin_password_hash` - Use [`bcrypt-tool`][bcrypt-tool] to encrypt password
 * `tectonic_azure_client_secret` - As in `ARM_CLIENT_SECRET` above
-* `tectonic_azure_ssh_key` - Full path the the public key part of the key added to `ssh-agent` above
+* `tectonic_azure_ssh_key` - Full path to the public key part of the key added to `ssh-agent` above
+* `tectonic_azure_location` - e.g., `centralus`
 * `tectonic_base_domain` - The DNS domain or subdomain delegated to an Azure DNS zone above
-* `tectonic_azure_external_dns_zone_id` - Get with `az network dns zone list`
-* `tectonic_cluster_name` - Usually matches `$CLUSTER` as set above
+* `tectonic_azure_external_dns_zone_id` - Value of `id` in `az network dns zone list` output
+* `tectonic_cluster_name` - The name to give the cluster
 * `tectonic_license_path` - Full path to `tectonic-license.txt` file downloaded from Tectonic account
 * `tectonic_pull_secret_path` - Full path to `config.json` container pull secret file downloaded from Tectonic account
 
-## Deploy the cluster
+### Deploy the cluster
 
 Check the plan before deploying:
 
@@ -165,13 +161,13 @@ $ terraform apply
 
 This should run for a short time.
 
-## Access the cluster
+### Access the cluster
 
-When `terraform apply` is complete, the Tectonic console will be available at `https://my-cluster.example.com`, as configured in the cluster build's variables file.
+When `terraform apply` is complete, access Tectonic Console in a web browser at the URL formed by concatenating the cluster name and the domain name configured in the Terraform variables.
 
 ### CLI cluster operations with kubectl
 
-Cluster credentials, including any generated CA, are written beneath the `generated/` directory. These credentials allow connections to the cluster with `kubectl`:
+Cluster credentials are written beneath the `generated/` directory, including any generated CA certificate and a `kubeconfig`. Use the kubeconfig file to access the cluster with the `kubectl` CLI tool. This is the only method of access for a Kubernetes cluster installed without Tectonic features:
 
 ```sh
 $ export KUBECONFIG=generated/auth/kubeconfig
@@ -182,15 +178,11 @@ $ kubectl cluster-info
 
 Deleting a cluster will remove only the infrastructure elements created by Terraform. For example, an existing DNS resource group is not removed.
 
-To delete the Azure cluster specified in `terraform.tfvars`, run the following `terraform destroy` command:
+To delete the cluster, run the `terraform destroy` command:
 
 ```
 $ terraform destroy
 ```
-
-## Known issues and workarounds
-
-See the [installer troubleshooting][troubleshooting] document for known problem points and workarounds.
 
 
 [azure-cli]: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
@@ -201,10 +193,13 @@ See the [installer troubleshooting][troubleshooting] document for known problem 
 [domain-delegation]: https://docs.microsoft.com/en-us/azure/dns/dns-delegate-domain-azure-dns
 [generic]: https://github.com/coreos/tectonic-docs/blob/master/Documentation/generic-platform.md
 [install-go]: https://golang.org/doc/install
+[k8s]: https://kubernetes.io
 [login]: https://docs.microsoft.com/en-us/cli/azure/get-started-with-azure-cli
 [plan-docs]: https://www.terraform.io/docs/commands/plan.html
 [register]: https://account.coreos.com/signup/summary/tectonic-2016-12
 [release-notes]: https://coreos.com/tectonic/releases/
+[tectonic]: https://coreos.com/tectonic/
+[terraform]: https://www.terraform.io/downloads.html
 [troubleshooting]: https://github.com/coreos/tectonic-docs/blob/master/Documentation/troubleshooting/installer-terraform.md
 [vars]: https://github.com/coreos/terraform-azurerm-kubernetes/blob/master/variables.md
-[verification-key]: https://coreos.com/security/app-signing-key/ 
+[verification-key]: https://coreos.com/security/app-signing-key/

@@ -7,7 +7,7 @@ provider "azurerm" {
 data "azurerm_client_config" "current" {}
 
 module "resource_group" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/resource-group?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/azure/resource-group?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   external_rsg_id = "${var.tectonic_azure_external_resource_group}"
   azure_location  = "${var.tectonic_azure_location}"
@@ -17,7 +17,7 @@ module "resource_group" {
 }
 
 module "vnet" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/vnet?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/azure/vnet?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   location            = "${var.tectonic_azure_location}"
   resource_group_name = "${module.resource_group.name}"
@@ -49,7 +49,7 @@ module "vnet" {
 }
 
 module "etcd" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/etcd?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/azure/etcd?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   location            = "${var.tectonic_azure_location}"
   resource_group_name = "${module.resource_group.name}"
@@ -97,7 +97,7 @@ data "null_data_source" "cloud_provider" {
 }
 
 module "ignition_masters" {
-  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   cloud_provider        = "azure"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -110,7 +110,7 @@ module "ignition_masters" {
 }
 
 module "masters" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/master-as?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/azure/master-as?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   cl_channel            = "${var.tectonic_cl_channel}"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -141,7 +141,7 @@ module "masters" {
 }
 
 module "ignition_workers" {
-  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   cloud_provider        = "azure"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -154,7 +154,7 @@ module "ignition_workers" {
 }
 
 module "workers" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/worker-as?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/azure/worker-as?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   cl_channel                   = "${var.tectonic_cl_channel}"
   cloud_provider_config        = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -182,7 +182,7 @@ module "workers" {
 }
 
 module "dns" {
-  source = "github.com/coreos/tectonic-installer//modules/dns/azure?ref=da99443f9a0b62f473b21e26d7d29c90959d8538"
+  source = "github.com/coreos/tectonic-installer//modules/dns/azure?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
 
   etcd_count   = "${var.tectonic_experimental ? 0 : var.tectonic_etcd_count}"
   master_count = "${var.tectonic_master_count}"

@@ -7,7 +7,7 @@ provider "azurerm" {
 data "azurerm_client_config" "current" {}
 
 module "resource_group" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/resource-group?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/azure/resource-group?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
   external_rsg_id = "${var.tectonic_azure_external_resource_group}"
   azure_location  = "${var.tectonic_azure_location}"
@@ -17,7 +17,7 @@ module "resource_group" {
 }
 
 module "vnet" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/vnet?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/azure/vnet?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
   location            = "${var.tectonic_azure_location}"
   resource_group_name = "${module.resource_group.name}"
@@ -38,8 +38,6 @@ module "vnet" {
   external_vnet_id          = "${var.tectonic_azure_external_vnet_id}"
   external_master_subnet_id = "${var.tectonic_azure_external_master_subnet_id}"
   external_worker_subnet_id = "${var.tectonic_azure_external_worker_subnet_id}"
-  external_nsg_etcd_id      = "${var.tectonic_azure_external_nsg_etcd_id}"
-  external_nsg_api_id       = "${var.tectonic_azure_external_nsg_api_id}"
   external_nsg_master_id    = "${var.tectonic_azure_external_nsg_master_id}"
   external_nsg_worker_id    = "${var.tectonic_azure_external_nsg_worker_id}"
 
@@ -49,7 +47,7 @@ module "vnet" {
 }
 
 module "etcd" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/etcd?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/azure/etcd?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
   location            = "${var.tectonic_azure_location}"
   resource_group_name = "${module.resource_group.name}"
@@ -97,8 +95,9 @@ data "null_data_source" "cloud_provider" {
 }
 
 module "ignition_masters" {
-  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
+  bootstrap_upgrade_cl  = "${var.tectonic_bootstrap_upgrade_cl}"
   cloud_provider        = "azure"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
   container_images      = "${var.tectonic_container_images}"
@@ -107,10 +106,11 @@ module "ignition_masters" {
   kubelet_cni_bin_dir   = "${var.tectonic_calico_network_policy ? "/var/lib/cni/bin" : "" }"
   kubelet_node_label    = "node-role.kubernetes.io/master"
   kubelet_node_taints   = "node-role.kubernetes.io/master=:NoSchedule"
+  tectonic_vanilla_k8s  = "${var.tectonic_vanilla_k8s}"
 }
 
 module "masters" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/master-as?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/azure/master-as?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
   cl_channel            = "${var.tectonic_cl_channel}"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -127,22 +127,24 @@ module "masters" {
   storage_type          = "${var.tectonic_azure_master_storage_type}"
   vm_size               = "${var.tectonic_azure_master_vm_size}"
 
-  ign_azure_udev_rules_id   = "${module.ignition_masters.azure_udev_rules_id}"
-  ign_bootkube_path_unit_id = "${module.bootkube.systemd_path_unit_id}"
-  ign_bootkube_service_id   = "${module.bootkube.systemd_service_id}"
-  ign_docker_dropin_id      = "${module.ignition_masters.docker_dropin_id}"
-  ign_kubelet_env_id        = "${module.ignition_masters.kubelet_env_id}"
-  ign_kubelet_service_id    = "${module.ignition_masters.kubelet_service_id}"
-  ign_locksmithd_service_id = "${module.ignition_masters.locksmithd_service_id}"
-  ign_max_user_watches_id   = "${module.ignition_masters.max_user_watches_id}"
-  ign_tectonic_path_unit_id = "${var.tectonic_vanilla_k8s ? "" : module.tectonic.systemd_path_unit_id}"
-  ign_tectonic_service_id   = "${module.tectonic.systemd_service_id}"
-  ign_tx_off_service_id     = "${module.ignition_masters.tx_off_service_id}"
+  ign_azure_udev_rules_id           = "${module.ignition_masters.azure_udev_rules_id}"
+  ign_bootkube_path_unit_id         = "${module.bootkube.systemd_path_unit_id}"
+  ign_bootkube_service_id           = "${module.bootkube.systemd_service_id}"
+  ign_docker_dropin_id              = "${module.ignition_masters.docker_dropin_id}"
+  ign_installer_kubelet_env_id      = "${module.ignition_workers.installer_kubelet_env_id}"
+  ign_k8s_node_bootstrap_service_id = "${module.ignition_masters.k8s_node_bootstrap_service_id}"
+  ign_kubelet_service_id            = "${module.ignition_masters.kubelet_service_id}"
+  ign_locksmithd_service_id         = "${module.ignition_masters.locksmithd_service_id}"
+  ign_max_user_watches_id           = "${module.ignition_masters.max_user_watches_id}"
+  ign_tectonic_path_unit_id         = "${var.tectonic_vanilla_k8s ? "" : module.tectonic.systemd_path_unit_id}"
+  ign_tectonic_service_id           = "${module.tectonic.systemd_service_id}"
+  ign_tx_off_service_id             = "${module.ignition_masters.tx_off_service_id}"
 }
 
 module "ignition_workers" {
-  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/ignition?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
+  bootstrap_upgrade_cl  = "${var.tectonic_bootstrap_upgrade_cl}"
   cloud_provider        = "azure"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
   container_images      = "${var.tectonic_container_images}"
@@ -151,10 +153,11 @@ module "ignition_workers" {
   kubelet_cni_bin_dir   = "${var.tectonic_calico_network_policy ? "/var/lib/cni/bin" : "" }"
   kubelet_node_label    = "node-role.kubernetes.io/node"
   kubelet_node_taints   = ""
+  tectonic_vanilla_k8s  = "${var.tectonic_vanilla_k8s}"
 }
 
 module "workers" {
-  source = "github.com/coreos/tectonic-installer//modules/azure/worker-as?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/azure/worker-as?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
   cl_channel                   = "${var.tectonic_cl_channel}"
   cloud_provider_config        = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -172,17 +175,18 @@ module "workers" {
   vm_size                      = "${var.tectonic_azure_worker_vm_size}"
   worker_count                 = "${var.tectonic_worker_count}"
 
-  ign_azure_udev_rules_id   = "${module.ignition_workers.azure_udev_rules_id}"
-  ign_docker_dropin_id      = "${module.ignition_workers.docker_dropin_id}"
-  ign_kubelet_env_id        = "${module.ignition_workers.kubelet_env_id}"
-  ign_kubelet_service_id    = "${module.ignition_workers.kubelet_service_id}"
-  ign_locksmithd_service_id = "${module.ignition_masters.locksmithd_service_id}"
-  ign_max_user_watches_id   = "${module.ignition_workers.max_user_watches_id}"
-  ign_tx_off_service_id     = "${module.ignition_workers.tx_off_service_id}"
+  ign_azure_udev_rules_id           = "${module.ignition_workers.azure_udev_rules_id}"
+  ign_docker_dropin_id              = "${module.ignition_workers.docker_dropin_id}"
+  ign_installer_kubelet_env_id      = "${module.ignition_workers.installer_kubelet_env_id}"
+  ign_k8s_node_bootstrap_service_id = "${module.ignition_workers.k8s_node_bootstrap_service_id}"
+  ign_kubelet_service_id            = "${module.ignition_workers.kubelet_service_id}"
+  ign_locksmithd_service_id         = "${module.ignition_masters.locksmithd_service_id}"
+  ign_max_user_watches_id           = "${module.ignition_workers.max_user_watches_id}"
+  ign_tx_off_service_id             = "${module.ignition_workers.tx_off_service_id}"
 }
 
 module "dns" {
-  source = "github.com/coreos/tectonic-installer//modules/dns/azure?ref=8704f5e0996a96389690c85e98e02824aef06b3a"
+  source = "github.com/coreos/tectonic-installer//modules/dns/azure?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
 
   etcd_count   = "${var.tectonic_experimental ? 0 : var.tectonic_etcd_count}"
   master_count = "${var.tectonic_master_count}"

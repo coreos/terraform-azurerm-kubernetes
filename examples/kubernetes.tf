@@ -53,24 +53,6 @@ module "kubernetes" {
   // tectonic_azure_external_master_subnet_id = ""
 
 
-  // (optional) The ID of the external Network Security Group used for the Tectonic Console and Kubernetes API Server.
-  // Leave blank to have a new one created.
-  // 
-  // Note this is the complete ID as returned in the "id" field by the Azure client, not just the name of the resource.
-  // 
-  // Example: "/subscriptions/b520eabf-d6c0-4757-8a5e-0fa7d2fe12b5/resourceGroups/my-k8s-cluster/providers/Microsoft.Network/networkSecurityGroups/my-lb-nsg
-  // tectonic_azure_external_nsg_api_id = ""
-
-
-  // (optional) The ID of the external Network Security Group used for etcd.
-  // Leave blank to have a new one created.
-  // 
-  // Note this is the complete ID as returned in the "id" field by the Azure client, not just the name of the resource.
-  // 
-  // Example: "/subscriptions/b520eabf-d6c0-4757-8a5e-0fa7d2fe12b5/resourceGroups/my-k8s-cluster/providers/Microsoft.Network/networkSecurityGroups/my-etcd-nsg
-  // tectonic_azure_external_nsg_etcd_id = ""
-
-
   // (optional) The ID of the external Network Security Group used for masters.
   // Leave blank to have a new one created.
   // 
@@ -117,6 +99,8 @@ module "kubernetes" {
   // tectonic_azure_extra_tags = ""
 
   // An Azure location where the cluster will be built.
+  // Use the location name as returned in the *Name* column by `az account list-locations` CLI command.
+  // Lowercase string with no spaces between words. Example: southcentralus
   tectonic_azure_location = ""
 
   // (optional) Storage account type for the master node(s). Example: Premium_LRS.
@@ -193,16 +177,22 @@ module "kubernetes" {
   // This field is mandatory if `tectonic_ca_cert` is set.
   // tectonic_ca_key_alg = "RSA"
 
-  // [ALPHA] If set to true, calico network policy support will be deployed.
+
+  // (optional) [ALPHA] If set to true, calico network policy support will be deployed.
   // WARNING: Enabling an alpha feature means that future updates may become unsupported.
   // This should only be enabled on clusters that are meant to be short-lived to begin validating the alpha feature.
-  tectonic_calico_network_policy = false
-  // The Container Linux update channel.
+  // tectonic_calico_network_policy = false
+
+
+  // (optional) The Container Linux update channel.
   // 
   // Examples: `stable`, `beta`, `alpha`
-  tectonic_cl_channel = "stable"
-  // This declares the IP range to assign Kubernetes pod IPs in CIDR notation.
-  tectonic_cluster_cidr = "10.2.0.0/16"
+  // tectonic_cl_channel = "stable"
+
+
+  // (optional) This declares the IP range to assign Kubernetes pod IPs in CIDR notation.
+  // tectonic_cluster_cidr = "10.2.0.0/16"
+
   // The name of the cluster.
   // If used in a cloud-environment, this will be prepended to `tectonic_base_domain` resulting in the URL to the Tectonic console.
   // 
@@ -297,10 +287,11 @@ module "kubernetes" {
   // 
   // Note: This field MUST be set manually prior to creating the cluster unless `tectonic_vanilla_k8s` is set to `true`.
   tectonic_pull_secret_path = ""
-  // This declares the IP range to assign Kubernetes service cluster IPs in CIDR notation. The maximum size of this IP range is /12
-  tectonic_service_cidr = "10.3.0.0/16"
-  // The Tectonic statistics collection URL to which to report.
-  tectonic_stats_url = "https://stats-collector.tectonic.com"
+
+  // (optional) This declares the IP range to assign Kubernetes service cluster IPs in CIDR notation. 
+  // The maximum size of this IP range is /12
+  // tectonic_service_cidr = "10.3.0.0/16"
+
   // If set to true, a vanilla Kubernetes cluster will be deployed, omitting any Tectonic assets.
   tectonic_vanilla_k8s = false
   // The number of worker nodes to be created.

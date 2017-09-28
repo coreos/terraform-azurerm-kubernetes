@@ -1,11 +1,11 @@
 locals {
-  "bootstrapping_host" = "${var.tectonic_azure_private_cluster ? 
-    module.vnet.master_private_ip_addresses[0] : 
+  "bootstrapping_host" = "${var.tectonic_azure_private_cluster ?
+    module.vnet.master_private_ip_addresses[0] :
     module.vnet.api_fqdn}"
 }
 
 module "bootstrapper" {
-  source = "github.com/coreos/tectonic-installer//modules/bootstrap-ssh?ref=20bdcd30df94e81d327976a4205cefa54b2af78b"
+  source = "github.com/coreos/tectonic-installer//modules/bootstrap-ssh?ref=abbb28f512f98c872dd66df7c5b2a42c644fea21"
 
   _dependencies = [
     "${module.masters.master_vm_ids}",

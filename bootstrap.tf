@@ -5,7 +5,7 @@ locals {
 }
 
 module "bootstrapper" {
-  source = "github.com/coreos/tectonic-installer//modules/bootstrap-ssh?ref=abbb28f512f98c872dd66df7c5b2a42c644fea21"
+  source = "github.com/coreos/tectonic-installer//modules/bootstrap-ssh?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
 
   _dependencies = [
     "${module.masters.master_vm_ids}",

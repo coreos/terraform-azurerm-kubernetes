@@ -8,7 +8,7 @@ data "template_file" "etcd_hostname_list" {
 }
 
 module "kube_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/kube/self-signed?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source = "github.com/coreos/tectonic-installer//modules/tls/kube/self-signed?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
 
   ca_cert_pem        = "${var.tectonic_ca_cert}"
   ca_key_alg         = "${var.tectonic_ca_key_alg}"
@@ -18,7 +18,7 @@ module "kube_certs" {
 }
 
 module "etcd_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/etcd?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source = "github.com/coreos/tectonic-installer//modules/tls/etcd?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
 
   etcd_ca_cert_path     = "${var.tectonic_etcd_ca_cert_path}"
   etcd_cert_dns_names   = "${data.template_file.etcd_hostname_list.*.rendered}"
@@ -29,7 +29,7 @@ module "etcd_certs" {
 }
 
 module "ingress_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/ingress/self-signed?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source = "github.com/coreos/tectonic-installer//modules/tls/ingress/self-signed?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
 
   base_address = "${module.vnet.ingress_fqdn}"
   ca_cert_pem  = "${module.kube_certs.ca_cert_pem}"
@@ -38,7 +38,7 @@ module "ingress_certs" {
 }
 
 module "identity_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/identity/self-signed?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source = "github.com/coreos/tectonic-installer//modules/tls/identity/self-signed?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
 
   ca_cert_pem = "${module.kube_certs.ca_cert_pem}"
   ca_key_alg  = "${module.kube_certs.ca_key_alg}"
@@ -46,7 +46,7 @@ module "identity_certs" {
 }
 
 module "bootkube" {
-  source = "github.com/coreos/tectonic-installer//modules/bootkube?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source = "github.com/coreos/tectonic-installer//modules/bootkube?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
 
   cloud_provider        = "azure"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -93,13 +93,14 @@ module "bootkube" {
 }
 
 module "tectonic" {
-  source   = "github.com/coreos/tectonic-installer//modules/tectonic?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source   = "github.com/coreos/tectonic-installer//modules/tectonic?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
   platform = "azure"
 
   cluster_name = "${var.tectonic_cluster_name}"
 
   base_address       = "${module.vnet.ingress_fqdn}"
   kube_apiserver_url = "https://${module.vnet.api_fqdn}:443"
+  service_cidr       = "${var.tectonic_service_cidr}"
 
   # Platform-independent variables wiring, do not modify.
   container_images      = "${var.tectonic_container_images}"
@@ -139,7 +140,7 @@ module "tectonic" {
 }
 
 module "flannel-vxlan" {
-  source = "github.com/coreos/tectonic-installer//modules/net/flannel-vxlan?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source = "github.com/coreos/tectonic-installer//modules/net/flannel-vxlan?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
 
   flannel_image     = "${var.tectonic_container_images["flannel"]}"
   flannel_cni_image = "${var.tectonic_container_images["flannel_cni"]}"
@@ -147,7 +148,7 @@ module "flannel-vxlan" {
 }
 
 module "calico-network-policy" {
-  source = "github.com/coreos/tectonic-installer//modules/net/calico-network-policy?ref=2861140d7fdc93ca33597e331628b28f0bfe040c"
+  source = "github.com/coreos/tectonic-installer//modules/net/calico-network-policy?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
 
   kube_apiserver_url = "https://${module.vnet.api_fqdn}:443"
   calico_image       = "${var.tectonic_container_images["calico"]}"

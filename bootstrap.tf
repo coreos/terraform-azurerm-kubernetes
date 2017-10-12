@@ -5,7 +5,7 @@ locals {
 }
 
 module "bootstrapper" {
-  source = "github.com/coreos/tectonic-installer//modules/bootstrap-ssh?ref=8f99e5389c90e1fa6038ef5b909508dd486a7c3c"
+  source = "github.com/coreos/tectonic-installer//modules/bootstrap-ssh?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
 
   _dependencies = [
     "${module.masters.master_vm_ids}",
@@ -13,8 +13,9 @@ module "bootstrapper" {
     "${module.etcd_certs.id}",
     "${module.bootkube.id}",
     "${module.tectonic.id}",
-    "${module.flannel-vxlan.id}",
-    "${module.calico-network-policy.id}",
+    "${module.flannel_vxlan.id}",
+    "${module.calico.id}",
+    "${module.canal.id}",
   ]
 
   bootstrapping_host = "${local.bootstrapping_host}"

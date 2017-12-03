@@ -1,5 +1,5 @@
 locals {
-  etcd_count = "${var.tectonic_experimental ? 0 : max(var.tectonic_etcd_count, 1)}"
+  etcd_count = "${var.tectonic_self_hosted_etcd != "" ? 0 : max(var.tectonic_etcd_count, 1)}"
 }
 
 data "template_file" "etcd_hostname_list" {
@@ -8,45 +8,48 @@ data "template_file" "etcd_hostname_list" {
 }
 
 module "kube_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/kube/self-signed?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/tls/kube/self-signed?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
   ca_cert_pem        = "${var.tectonic_ca_cert}"
   ca_key_alg         = "${var.tectonic_ca_key_alg}"
   ca_key_pem         = "${var.tectonic_ca_key}"
   kube_apiserver_url = "https://${module.vnet.api_fqdn}:443"
   service_cidr       = "${var.tectonic_service_cidr}"
+  validity_period    = "${var.tectonic_tls_validity_period}"
 }
 
 module "etcd_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/etcd?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/tls/etcd/signed?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
   etcd_ca_cert_path     = "${var.tectonic_etcd_ca_cert_path}"
   etcd_cert_dns_names   = "${data.template_file.etcd_hostname_list.*.rendered}"
   etcd_client_cert_path = "${var.tectonic_etcd_client_cert_path}"
   etcd_client_key_path  = "${var.tectonic_etcd_client_key_path}"
-  self_signed           = "${var.tectonic_experimental || var.tectonic_etcd_tls_enabled}"
+  self_signed           = "${var.tectonic_self_hosted_etcd != "" ? "true" : length(compact(var.tectonic_etcd_servers)) == 0 ? "true" : "false"}"
   service_cidr          = "${var.tectonic_service_cidr}"
 }
 
 module "ingress_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/ingress/self-signed?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/tls/ingress/self-signed?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
-  base_address = "${module.vnet.ingress_fqdn}"
-  ca_cert_pem  = "${module.kube_certs.ca_cert_pem}"
-  ca_key_alg   = "${module.kube_certs.ca_key_alg}"
-  ca_key_pem   = "${module.kube_certs.ca_key_pem}"
+  base_address    = "${module.vnet.ingress_fqdn}"
+  ca_cert_pem     = "${module.kube_certs.ca_cert_pem}"
+  ca_key_alg      = "${module.kube_certs.ca_key_alg}"
+  ca_key_pem      = "${module.kube_certs.ca_key_pem}"
+  validity_period = "${var.tectonic_tls_validity_period}"
 }
 
 module "identity_certs" {
-  source = "github.com/coreos/tectonic-installer//modules/tls/identity/self-signed?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/tls/identity/self-signed?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
-  ca_cert_pem = "${module.kube_certs.ca_cert_pem}"
-  ca_key_alg  = "${module.kube_certs.ca_key_alg}"
-  ca_key_pem  = "${module.kube_certs.ca_key_pem}"
+  ca_cert_pem     = "${module.kube_certs.ca_cert_pem}"
+  ca_key_alg      = "${module.kube_certs.ca_key_alg}"
+  ca_key_pem      = "${module.kube_certs.ca_key_pem}"
+  validity_period = "${var.tectonic_tls_validity_period}"
 }
 
 module "bootkube" {
-  source = "github.com/coreos/tectonic-installer//modules/bootkube?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/bootkube?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
   cloud_provider        = "azure"
   cloud_provider_config = "${jsonencode(data.null_data_source.cloud_provider.inputs)}"
@@ -84,8 +87,10 @@ module "bootkube" {
   kubelet_cert_pem     = "${module.kube_certs.kubelet_cert_pem}"
   kubelet_key_pem      = "${module.kube_certs.kubelet_key_pem}"
 
-  etcd_endpoints       = "${data.template_file.etcd_hostname_list.*.rendered}"
-  experimental_enabled = "${var.tectonic_experimental}"
+  etcd_backup_size          = "${var.tectonic_etcd_backup_size}"
+  etcd_backup_storage_class = "${var.tectonic_etcd_backup_storage_class}"
+  etcd_endpoints            = "${data.template_file.etcd_hostname_list.*.rendered}"
+  self_hosted_etcd          = "${var.tectonic_self_hosted_etcd}"
 
   master_count = "${var.tectonic_master_count}"
 
@@ -93,7 +98,7 @@ module "bootkube" {
 }
 
 module "tectonic" {
-  source   = "github.com/coreos/tectonic-installer//modules/tectonic?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source   = "github.com/coreos/tectonic-installer//modules/tectonic?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
   platform = "azure"
 
   cluster_name = "${var.tectonic_cluster_name}"
@@ -132,7 +137,7 @@ module "tectonic" {
   console_client_id = "tectonic-console"
   kubectl_client_id = "tectonic-kubectl"
   ingress_kind      = "NodePort"
-  experimental      = "${var.tectonic_experimental}"
+  self_hosted_etcd  = "${var.tectonic_self_hosted_etcd}"
   master_count      = "${var.tectonic_master_count}"
   stats_url         = "${var.tectonic_stats_url}"
 
@@ -140,7 +145,7 @@ module "tectonic" {
 }
 
 module "flannel_vxlan" {
-  source = "github.com/coreos/tectonic-installer//modules/net/flannel-vxlan?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/net/flannel_vxlan?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
   cluster_cidr     = "${var.tectonic_cluster_cidr}"
   enabled          = "${var.tectonic_networking == "flannel"}"
@@ -148,7 +153,7 @@ module "flannel_vxlan" {
 }
 
 module "calico" {
-  source = "github.com/coreos/tectonic-installer//modules/net/calico?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/net/calico?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
   container_images = "${var.tectonic_container_images}"
   cluster_cidr     = "${var.tectonic_cluster_cidr}"
@@ -156,7 +161,7 @@ module "calico" {
 }
 
 module "canal" {
-  source = "github.com/coreos/tectonic-installer//modules/net/canal?ref=5dd9b5f4b0e45cbd53cad66688bdc637ba9fe35d"
+  source = "github.com/coreos/tectonic-installer//modules/net/canal?ref=0a22c73d39f67ba4bb99106a9e72322a47179736"
 
   container_images = "${var.tectonic_container_images}"
   cluster_cidr     = "${var.tectonic_cluster_cidr}"
